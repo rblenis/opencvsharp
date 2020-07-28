@@ -161,6 +161,13 @@ namespace OpenCvSharp
                     dllHandle = LoadLibraryInternal(dllName, baseDirectory, processArch);
                     if (dllHandle != IntPtr.Zero) return;
 
+                    // executing assembly may have been shadow-copied - try original location
+                    var baseDirectoryURI = Path.GetDirectoryName(executingAssembly.CodeBase) ?? "";
+                    baseDirectory = new Uri(baseDirectoryURI).LocalPath;
+
+                    dllHandle = LoadLibraryInternal(dllName, baseDirectory, processArch);
+                    if (dllHandle != IntPtr.Zero) return;
+
                     // Fallback to current app domain
                     // TODO
 #if DOTNET_FRAMEWORK
@@ -253,8 +260,7 @@ namespace OpenCvSharp
         {
             //IntPtr libraryHandle = IntPtr.Zero;
             var platformName = GetPlatformName(processArchInfo.Architecture) ?? "";
-            var expectedDllDirectory = Path.Combine(
-                Path.Combine(baseDirectory, DllDirectory), platformName);
+            var expectedDllDirectory = Path.Combine( baseDirectory, DllDirectory, platformName);
             //var fileName = FixUpDllFileName(Path.Combine(expectedDllDirectory, dllName));
 
             return LoadLibraryRaw(dllName, expectedDllDirectory);
@@ -264,7 +270,6 @@ namespace OpenCvSharp
         {
             var libraryHandle = IntPtr.Zero;
             var fileName = FixUpDllFileName(Path.Combine(baseDirectory, dllName));
-
 #if WINRT && false
             // MP! Note: This is a hack, needs refinement. We don't need to carry payload of both binaries for WinRT because the appx is platform specific.
             ProcessArchitectureInfo processInfo = GetProcessArchitecture();
